@@ -1,8 +1,8 @@
-// CalendarPage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
 import { SocketContext } from '../App';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import '../CSS-Style/CalendarPage.css'; // Import the CSS file for styling
 
 function CalendarPage() {
@@ -10,6 +10,7 @@ function CalendarPage() {
   const [tasks, setTasks] = useState([]);
   const token = localStorage.getItem('token');
   const socket = useContext(SocketContext);
+  const navigate = useNavigate();
 
   // Function to fetch tasks with authorization
   const fetchTasks = useCallback(() => {
@@ -47,6 +48,11 @@ function CalendarPage() {
     return tasks.filter(task => dayjs(task.dueDate).isSame(date, 'day'));
   };
 
+  // Navigate to the TaskPage and scroll to the specific task
+  const handleTaskClick = (taskId) => {
+    navigate('/tasks', { state: { taskId } });
+  };
+
   // Render the calendar grid
   const renderCalendar = () => {
     const startDay = currentMonth.startOf('month').startOf('week');
@@ -67,7 +73,10 @@ function CalendarPage() {
                 className={`calendar-day ${currentDate.isSame(currentMonth, 'month') ? '' : 'disabled'}`}>
                 <span>{currentDate.date()}</span>
                 {dayTasks.map(task => (
-                  <div key={task._id} className="task">
+                  <div 
+                    key={task._id} 
+                    className="task" 
+                    onClick={() => handleTaskClick(task._id)}>
                     {task.text}
                   </div>
                 ))}

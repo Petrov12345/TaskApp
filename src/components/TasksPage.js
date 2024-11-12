@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import axios from 'axios';
 import { SocketContext } from '../App';
+import { useLocation } from 'react-router-dom';
+import '../CSS-Style/Taskpage.css';
 
 function TaskPage() {
   const [teams, setTeams] = useState([]);
@@ -17,6 +19,9 @@ function TaskPage() {
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
   const socket = useContext(SocketContext);
+  const location = useLocation();
+  const { taskId } = location.state || {}; // Get task ID from navigation state
+  const taskRefs = useRef({});
 
   const fetchTasks = useCallback(() => {
     axios.get('http://localhost:5000/tasks', {
@@ -65,6 +70,13 @@ function TaskPage() {
       socket?.off('leaveTeam', fetchTeams);
     };
   }, [socket, fetchTasks, fetchTeams]);
+
+  useEffect(() => {
+    // Scroll to the task if a task ID is provided in the state
+    if (taskId && taskRefs.current[taskId]) {
+      taskRefs.current[taskId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [taskId, teamTasks]);
 
   const handleCreateOrUpdateTask = () => {
     if (!taskText || !dueDate) {
@@ -142,10 +154,10 @@ function TaskPage() {
   }, [selectedTeam, teams]);
 
   return (
-    <div>
+    <div className="task-page">
       <h2>Tasks</h2>
 
-      <div>
+      <div className="task-form">
         <h3>{editingTask ? 'Edit Task' : 'Create New Task'}</h3>
         <input
           type="text"
@@ -196,9 +208,9 @@ function TaskPage() {
       {Object.keys(teamTasks).map(teamId => (
         <div key={teamId}>
           <h4>{teamId === 'personal' ? 'Personal Tasks' : teams.find(team => team._id === teamId)?.name}</h4>
-          <ul>
+          <ul className="task-list">
             {teamTasks[teamId]?.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).map(task => (
-              <li key={task._id}>
+              <li key={task._id} ref={(el) => taskRefs.current[task._id] = el} className="task-item">
                 <div>
                   <strong>{task.text}</strong>
                 </div>
