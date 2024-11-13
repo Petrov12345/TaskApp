@@ -242,7 +242,7 @@ function ManageTeamPage() {
               <ul>
                 {pendingInvites.map(invite => (
                   <li key={invite._id}>
-                    {invite.username} (Pending)
+                    {invite.username ? invite.username : '(Pending)'} (Pending)
                     <button onClick={() => handleRevokeInvite(invite._id)}>Revoke Invite</button>
                   </li>
                 ))}

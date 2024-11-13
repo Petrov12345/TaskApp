@@ -89,3 +89,9 @@
   .task-item button:last-child:hover {
     background-color: #da190b;
   }
+
+/* Taskpage.css */
+.task-item.highlight {
+  background-color: yellow; /* Highlight color */
+  transition: background-color 1.5s ease-out;
+}

@@ -1,17 +1,17 @@
-// CalendarPage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { SocketContext } from '../App';
 import dayjs from 'dayjs';
-import '../CSS-Style/CalendarPage.css'; // Import the CSS file for styling
+import '../CSS-Style/CalendarPage.css';
 
 function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [tasks, setTasks] = useState([]);
   const token = localStorage.getItem('token');
   const socket = useContext(SocketContext);
+  const navigate = useNavigate();
 
-  // Function to fetch tasks with authorization
   const fetchTasks = useCallback(() => {
     axios.get('http://localhost:5000/tasks', {
       headers: { Authorization: `Bearer ${token}` }
@@ -20,7 +20,6 @@ function CalendarPage() {
       .catch(error => console.error('Error fetching tasks:', error));
   }, [token]);
 
-  // Set up socket events and fetch tasks on component mount
   useEffect(() => {
     fetchTasks();
 
@@ -37,17 +36,18 @@ function CalendarPage() {
     };
   }, [socket, fetchTasks]);
 
-  // Handle month navigation
   const handleMonthChange = (direction) => {
     setCurrentMonth(currentMonth.add(direction, 'month'));
   };
 
-  // Get tasks for a specific date
   const getTasksForDate = (date) => {
     return tasks.filter(task => dayjs(task.dueDate).isSame(date, 'day'));
   };
 
-  // Render the calendar grid
+  const handleTaskClick = (taskId) => {
+    navigate('/tasks', { state: { taskId } }); // Pass taskId via state
+  };
+
   const renderCalendar = () => {
     const startDay = currentMonth.startOf('month').startOf('week');
     const endDay = currentMonth.endOf('month').endOf('week');
@@ -59,15 +59,19 @@ function CalendarPage() {
         <div key={date.format('YYYY-MM-DD')} className="calendar-row">
           {[...Array(7)].map((_, i) => {
             const dayTasks = getTasksForDate(date);
-            const currentDate = date; // Store the current date for this cell
-            date = date.add(1, 'day'); // Increment date for the next cell
+            const currentDate = date;
+            date = date.add(1, 'day');
             return (
               <div 
                 key={i} 
                 className={`calendar-day ${currentDate.isSame(currentMonth, 'month') ? '' : 'disabled'}`}>
                 <span>{currentDate.date()}</span>
                 {dayTasks.map(task => (
-                  <div key={task._id} className="task">
+                  <div 
+                    key={task._id} 
+                    className="task" 
+                    onClick={() => handleTaskClick(task._id)} // Pass task ID on click
+                  >
                     {task.text}
                   </div>
                 ))}

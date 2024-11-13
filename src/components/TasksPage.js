@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom'; // To get state from navigation
 import { SocketContext } from '../App';
 import '../CSS-Style/Taskpage.css';
 
@@ -15,34 +16,59 @@ function TaskPage() {
   const [priority, setPriority] = useState('low');
   const [dueDate, setDueDate] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState(null); // Track the highlighted task
+  const [hasScrolledToLocationTask, setHasScrolledToLocationTask] = useState(false); // New state
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
   const socket = useContext(SocketContext);
+  const location = useLocation(); // Access the state passed from CalendarPage
+  const taskRefs = useRef({}); // Store references to each task item
 
-  // Initialize taskRefs to store references to each task item
-  const taskRefs = useRef({});
+  // Function to scroll to a specific task and reset highlights if necessary
+  const scrollToTask = (taskId) => {
+    if (highlightedTaskId) {
+      // Clear any existing highlight
+      const previousElement = taskRefs.current[highlightedTaskId];
+      if (previousElement) previousElement.classList.remove('highlight');
+    }
+
+    // Set and highlight the new task
+    const taskElement = taskRefs.current[taskId];
+    if (taskElement) {
+      setHighlightedTaskId(taskId); // Update the highlighted task ID
+      taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      taskElement.classList.add('highlight');
+      setTimeout(() => taskElement.classList.remove('highlight'), 1500); // Remove highlight after 1.5s
+    }
+  };
 
   const fetchTasks = useCallback(() => {
-    axios.get('http://localhost:5000/tasks', {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(response => {
-      const groupedTasks = {};
-      response.data.forEach(task => {
-        const teamId = task.team?._id || 'personal';
-        if (!groupedTasks[teamId]) groupedTasks[teamId] = [];
-        groupedTasks[teamId].push(task);
-      });
-      setTasks(response.data);
-      setTeamTasks(groupedTasks);
-    }).catch(error => console.error('Error fetching tasks:', error));
+    axios
+      .get('http://localhost:5000/tasks', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        const groupedTasks = {};
+        response.data.forEach((task) => {
+          const teamId = task.team?._id || 'personal';
+          if (!groupedTasks[teamId]) groupedTasks[teamId] = [];
+          groupedTasks[teamId].push(task);
+        });
+        setTasks(response.data);
+        setTeamTasks(groupedTasks);
+      })
+      .catch((error) => console.error('Error fetching tasks:', error));
   }, [token]);
 
   const fetchTeams = useCallback(() => {
-    axios.get('http://localhost:5000/teams', {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(response => {
-      setTeams([{ _id: 'personal', name: 'Personal Task' }, ...response.data.teams]);
-    }).catch(error => console.error('Error fetching teams:', error));
+    axios
+      .get('http://localhost:5000/teams', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        setTeams([{ _id: 'personal', name: 'Personal Task' }, ...response.data.teams]);
+      })
+      .catch((error) => console.error('Error fetching teams:', error));
   }, [token]);
 
   useEffect(() => {
@@ -70,9 +96,17 @@ function TaskPage() {
     };
   }, [socket, fetchTasks, fetchTeams]);
 
+  // Use effect to scroll to the task from location.state once
+  useEffect(() => {
+    if (!hasScrolledToLocationTask && location.state?.taskId && tasks.length > 0) {
+      scrollToTask(location.state.taskId);
+      setHasScrolledToLocationTask(true);
+    }
+  }, [hasScrolledToLocationTask, location.state, tasks]);
+
   const handleCreateOrUpdateTask = () => {
     if (!taskText || !dueDate) {
-      alert("Please enter task text and due date.");
+      alert('Please enter task text and due date.');
       return;
     }
 
@@ -83,28 +117,46 @@ function TaskPage() {
       assignees: selectedTeam === 'personal' ? [userId] : selectedAssignees,
       priority,
       dueDate,
-      isPersonal: selectedTeam === 'personal'
+      isPersonal: selectedTeam === 'personal',
     };
 
     const request = editingTask
       ? axios.put(`http://localhost:5000/update-task/${editingTask._id}`, taskData, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         })
       : axios.post('http://localhost:5000/add-task', taskData, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-    request.then(() => {
-      fetchTasks();
-      resetForm();
-    }).catch(error => console.error(editingTask ? "Error updating task:" : "Error adding task:", error));
+    request
+      .then((response) => {
+        fetchTasks();
+        resetForm();
+
+        // Highlight the newly created or updated task
+        const updatedTaskId = editingTask ? editingTask._id : response.data._id;
+        scrollToTask(updatedTaskId);
+
+        // Clear location.state to prevent re-highlighting the calendar-selected task
+        setHasScrolledToLocationTask(true);
+      })
+      .catch((error) =>
+        console.error(editingTask ? 'Error updating task:' : 'Error adding task:', error)
+      );
   };
 
   const handleDeleteTask = (taskId) => {
-    axios.delete(`http://localhost:5000/delete-task/${taskId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(() => fetchTasks())
-      .catch(error => console.error("Error deleting task:", error));
+    axios
+      .delete(`http://localhost:5000/delete-task/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(() => {
+        fetchTasks();
+        if (highlightedTaskId === taskId) {
+          setHighlightedTaskId(null);
+        }
+      })
+      .catch((error) => console.error('Error deleting task:', error));
   };
 
   const handleEditTask = (task) => {
@@ -112,9 +164,11 @@ function TaskPage() {
     setTaskText(task.text);
     setDescription(task.description);
     setSelectedTeam(task.team ? task.team._id : 'personal');
-    setSelectedAssignees(task.assignees.map(assignee => assignee._id));
+    setSelectedAssignees(task.assignees.map((assignee) => assignee._id));
     setPriority(task.priority);
     setDueDate(task.dueDate.slice(0, 10));
+
+    scrollToTask(task._id);
   };
 
   const resetForm = () => {
@@ -130,15 +184,17 @@ function TaskPage() {
   const handleAssigneeChange = (event) => {
     const { options } = event.target;
     const selectedValues = Array.from(options)
-      .filter(option => option.selected)
-      .map(option => option.value);
+      .filter((option) => option.selected)
+      .map((option) => option.value);
 
-    setSelectedAssignees(selectedValues.includes('all') ? assignees.map(member => member._id) : selectedValues);
+    setSelectedAssignees(
+      selectedValues.includes('all') ? assignees.map((member) => member._id) : selectedValues
+    );
   };
 
   useEffect(() => {
     if (selectedTeam && selectedTeam !== 'personal') {
-      const team = teams.find(team => team._id === selectedTeam);
+      const team = teams.find((team) => team._id === selectedTeam);
       if (team) setAssignees(team.members);
     } else {
       setAssignees([]);
@@ -163,21 +219,28 @@ function TaskPage() {
           placeholder="Task Description"
         />
 
-        <select onChange={(e) => {
-          const teamSelection = e.target.value;
-          setSelectedTeam(teamSelection);
-          setSelectedAssignees(teamSelection === 'personal' ? [userId] : []);
-        }} value={selectedTeam}>
-          {teams.map(team => (
-            <option key={team._id} value={team._id}>{team.name}</option>
+        <select
+          onChange={(e) => {
+            const teamSelection = e.target.value;
+            setSelectedTeam(teamSelection);
+            setSelectedAssignees(teamSelection === 'personal' ? [userId] : []);
+          }}
+          value={selectedTeam}
+        >
+          {teams.map((team) => (
+            <option key={team._id} value={team._id}>
+              {team.name}
+            </option>
           ))}
         </select>
 
         {selectedTeam !== 'personal' && (
           <select multiple onChange={handleAssigneeChange}>
             <option value="all">All Team Members</option>
-            {assignees.map(member => (
-              <option key={member._id} value={member._id}>{member.username}</option>
+            {assignees.map((member) => (
+              <option key={member._id} value={member._id}>
+                {member.username}
+              </option>
             ))}
           </select>
         )}
@@ -188,35 +251,43 @@ function TaskPage() {
           <option value="high">High</option>
           <option value="very high">Very High</option>
         </select>
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-        />
-        <button onClick={handleCreateOrUpdateTask}>{editingTask ? 'Update Task' : 'Add Task'}</button>
+        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        <button onClick={handleCreateOrUpdateTask}>
+          {editingTask ? 'Update Task' : 'Add Task'}
+        </button>
       </div>
 
       <h3>All Tasks</h3>
-      {Object.keys(teamTasks).map(teamId => (
+      {Object.keys(teamTasks).map((teamId) => (
         <div key={teamId}>
-          <h4>{teamId === 'personal' ? 'Personal Tasks' : teams.find(team => team._id === teamId)?.name}</h4>
+          <h4>
+            {teamId === 'personal'
+              ? 'Personal Tasks'
+              : teams.find((team) => team._id === teamId)?.name}
+          </h4>
           <ul className="task-list">
-            {teamTasks[teamId]?.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).map(task => (
-              <li key={task._id} ref={(el) => taskRefs.current[task._id] = el} className="task-item">
-                <div>
-                  <strong>{task.text}</strong>
-                </div>
-                {task.description && <p>{task.description}</p>}
-                {!task.isCompleted && (
-                  <>
-                    <span>Priority: {task.priority}</span>
-                    <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                  </>
-                )}
-                <button onClick={() => handleEditTask(task)}>Edit</button>
-                <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
-              </li>
-            ))}
+            {teamTasks[teamId]
+              ?.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+              .map((task) => (
+                <li
+                  key={task._id}
+                  ref={(el) => (taskRefs.current[task._id] = el)} // Store ref for each task
+                  className={`task-item ${highlightedTaskId === task._id ? 'highlight' : ''}`} // Apply highlight class
+                >
+                  <div>
+                    <strong>{task.text}</strong>
+                  </div>
+                  {task.description && <p>{task.description}</p>}
+                  {!task.isCompleted && (
+                    <>
+                      <span>Priority: {task.priority}</span>
+                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                    </>
+                  )}
+                  <button onClick={() => handleEditTask(task)}>Edit</button>
+                  <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
+                </li>
+              ))}
           </ul>
         </div>
       ))}

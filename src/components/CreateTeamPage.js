@@ -19,44 +19,33 @@ function CreateTeamPage() {
   // Mutation to create a new team
   const createTeamMutation = useMutation(
     async ({ name, selectedMembers }) => {
-      // First, create the team
-      const teamResponse = await axios.post(
-        'http://localhost:5000/create-team',
-        { name },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const teamId = teamResponse.data.team._id;
-
-      // Send invites to selected members
-      const invitePromises = selectedMembers.map((memberId) =>
-        axios.post(
-          'http://localhost:5000/invite-to-team',
-          { teamId, inviteeId: memberId },
+      try {
+        // First, create the team
+        const teamResponse = await axios.post(
+          'http://localhost:5000/create-team',
+          { name, members: selectedMembers }, // Include members directly in team creation
           {
             headers: { Authorization: `Bearer ${token}` },
           }
-        )
-      );
-      await Promise.all(invitePromises); // Await all invite requests to complete
-
-      return teamId;
+        );
+        return teamResponse.data.team._id; // Return teamId if successful
+      } catch (error) {
+        throw error; // Pass error to onError for handling
+      }
     },
     {
       onSuccess: () => {
-        alert('Team created successfully!');
-        queryClient.invalidateQueries('friends'); // Refresh friends if needed
-        setTeamName('');
+        alert('Team created successfully!'); // Success alert
+        queryClient.invalidateQueries('teams'); // Refresh team queries if needed
+        setTeamName(''); // Reset form
         setSelectedMembers([]);
-        window.location.href = '/teams'; // Redirect after success
+        window.location.href = '/teams'; // Redirect to teams page
       },
       onError: (error) => {
         if (error.response?.status === 400 && error.response?.data === "You already have a team with this name") {
           alert("Team name already in use");
         } else {
-          console.error("Error creating team:", error);
+          console.error("Error creating team or sending invites:", error);
           alert("Error creating team. Please try again.");
         }
       },
@@ -65,7 +54,7 @@ function CreateTeamPage() {
 
   const handleCreateTeam = () => {
     if (!teamName.trim()) {
-      alert("Must enter a valid team name");
+      alert("Please enter a valid team name.");
       return;
     }
     createTeamMutation.mutate({ name: teamName, selectedMembers });
@@ -79,7 +68,6 @@ function CreateTeamPage() {
     );
   };
 
-  // Display loading or error message while data is fetched
   if (isLoading) return <p>Loading friends...</p>;
   if (error) return <p>Error loading friends: {error.message}</p>;
 
