@@ -388,197 +388,208 @@ app.post('/remove-friend', authenticateUser, async (req, res) => {
 
 // Create a new team
 app.post('/create-team', authenticateUser, async (req, res) => {
-    const { name, members = [] } = req.body;
-    try {
-      const existingTeam = await Team.findOne({ name, owner: req.userId });
-      if (existingTeam) {
-        return res.status(400).send('You already have a team with this name');
-      }
-  
-      const newTeam = new Team({
-        name,
-        owner: req.userId,
-        members: [req.userId], // Owner is automatically a member
-        pendingInvites: members,
-      });
-      await newTeam.save();
-      
-      members.forEach((memberId) => {
-        io.to(memberId).emit('teamInviteReceived', {
-          teamId: newTeam._id,
-          teamName: newTeam.name,
-          invitedBy: req.userId,
-        });
-      });
-  
-      res.send({ success: true, team: newTeam });
-    } catch (error) {
-      console.error('Error creating team:', error);
-      res.status(500).send('Error creating team');
+  const { name, members = [] } = req.body;
+  try {
+    // Check if a team with the same name already exists for this owner
+    const existingTeam = await Team.findOne({ name, owner: req.userId });
+    if (existingTeam) {
+      return res.status(400).send('You already have a team with this name');
     }
-  });
-  
-  // Get teams the user is a member of
-  app.get('/teams', authenticateUser, async (req, res) => {
-    try {
-      const teams = await Team.find({ members: req.userId })
-        .populate('members', 'username')
-        .populate('owner', 'username');
-      res.send({ teams, userId: req.userId });
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-      res.status(500).send('Error fetching teams');
-    }
-  });
-  
-  // Get team invites for the user
-  app.get('/team-invites', authenticateUser, async (req, res) => {
-    try {
-      const teamInvites = await Team.find({ pendingInvites: req.userId })
-        .populate('owner', 'username');
-      const invitesData = teamInvites.map((invite) => ({
-        team: invite,
-        invitedBy: invite.owner,
-      }));
-      res.send(invitesData);
-    } catch (error) {
-      console.error('Error fetching team invites:', error);
-      res.status(500).send('Error fetching team invites');
-    }
-  });
-  
-  // Invite a user to a team (only the team owner can invite users)
-  app.post('/invite-to-team', authenticateUser, async (req, res) => {
-    const { teamId, inviteeId } = req.body;
-    try {
-      const team = await Team.findById(teamId);
-      if (!team) return res.status(404).send('Team not found');
-      if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can invite users');
-  
-      if (team.pendingInvites.includes(inviteeId) || team.members.includes(inviteeId)) {
-        return res.status(400).send('User already invited or is a member of this team');
-      }
-  
-      team.pendingInvites.push(inviteeId);
-      await team.save();
-  
-      res.send({ success: true, message: 'Invite sent' });
-      io.to(inviteeId).emit('teamInviteReceived', {
-        teamId: team._id,
-        teamName: team.name,
+
+    // Create the new team and set the owner as a member by default
+    const newTeam = new Team({
+      name,
+      owner: req.userId,
+      members: [req.userId], // Owner is automatically a member
+      pendingInvites: members,
+    });
+    await newTeam.save();
+
+    // Re-fetch the team to populate owner, members, and pendingInvites with usernames
+    const populatedTeam = await Team.findById(newTeam._id)
+      .populate('owner', 'username')
+      .populate('members', 'username')
+      .populate('pendingInvites', 'username');
+
+    // Emit invites to members
+    members.forEach((memberId) => {
+      io.to(memberId).emit('teamInviteReceived', {
+        teamId: populatedTeam._id,
+        teamName: populatedTeam.name,
         invitedBy: req.userId,
       });
-    } catch (error) {
-      console.error('Error inviting to team:', error);
-      res.status(500).send('Error inviting to team');
+    });
+
+    // Send a success response with a clear message
+    res.send({ success: true, message: 'Team created successfully!', team: populatedTeam });
+  } catch (error) {
+    console.error('Error creating team:', error);
+    res.status(500).send({ success: false, message: 'Error creating team' });
+  }
+});
+
+// Get teams the user is a member of
+app.get('/teams', authenticateUser, async (req, res) => {
+  try {
+    const teams = await Team.find({ members: req.userId })
+      .populate('members', 'username')
+      .populate('owner', 'username')
+      .populate('pendingInvites', 'username'); // Populate pendingInvites with usernames
+    res.send({ teams, userId: req.userId });
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).send('Error fetching teams');
+  }
+});
+
+// Get team invites for the user
+app.get('/team-invites', authenticateUser, async (req, res) => {
+  try {
+    const teamInvites = await Team.find({ pendingInvites: req.userId })
+      .populate('owner', 'username');
+    const invitesData = teamInvites.map((invite) => ({
+      team: invite,
+      invitedBy: invite.owner,
+    }));
+    res.send(invitesData);
+  } catch (error) {
+    console.error('Error fetching team invites:', error);
+    res.status(500).send('Error fetching team invites');
+  }
+});
+
+// Invite a user to a team (only the team owner can invite users)
+app.post('/invite-to-team', authenticateUser, async (req, res) => {
+  const { teamId, inviteeId } = req.body;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).send('Team not found');
+    if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can invite users');
+
+    if (team.pendingInvites.includes(inviteeId) || team.members.includes(inviteeId)) {
+      return res.status(400).send('User already invited or is a member of this team');
     }
-  });
-  
-  // Respond to a team invite (accept or deny)
-  app.post('/respond-team-invite', authenticateUser, async (req, res) => {
-    const { teamId, action } = req.body;
-    try {
-      const team = await Team.findById(teamId);
-      if (!team) return res.status(404).send('Team not found');
-      if (!team.pendingInvites.includes(req.userId)) return res.status(400).send('Invite no longer valid');
-  
-      if (action === 'accept') {
-        team.members.push(req.userId);
-        team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== req.userId);
-        await team.save();
-  
-        io.to(req.userId).emit('teamJoined', { teamId: team._id });
-        io.to(team.owner.toString()).emit('memberJoinedTeam', { teamId: team._id, userId: req.userId });
-      } else if (action === 'deny') {
-        team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== req.userId);
-        await team.save();
-      }
-  
-      res.send({ success: true, message: `Invite ${action}ed successfully` });
-    } catch (error) {
-      console.error('Error responding to team invite:', error);
-      res.status(500).send('Error processing team invite');
+
+    team.pendingInvites.push(inviteeId);
+    await team.save();
+
+    res.send({ success: true, message: 'Invite sent' });
+    io.to(inviteeId).emit('teamInviteReceived', {
+      teamId: team._id,
+      teamName: team.name,
+      invitedBy: req.userId,
+    });
+  } catch (error) {
+    console.error('Error inviting to team:', error);
+    res.status(500).send('Error inviting to team');
+  }
+});
+
+// Respond to a team invite (accept or deny)
+app.post('/respond-team-invite', authenticateUser, async (req, res) => {
+  const { teamId, action } = req.body;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).send('Team not found');
+    if (!team.pendingInvites.includes(req.userId)) return res.status(400).send('Invite no longer valid');
+
+    if (action === 'accept') {
+      team.members.push(req.userId);
+      team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== req.userId);
+      await team.save();
+
+      io.to(req.userId).emit('teamJoined', { teamId: team._id });
+      io.to(team.owner.toString()).emit('memberJoinedTeam', { teamId: team._id, userId: req.userId });
+    } else if (action === 'deny') {
+      team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== req.userId);
+      await team.save();
     }
-  });
-  
-  // Manage a team (rename, add or remove members)
+
+    res.send({ success: true, message: `Invite ${action}ed successfully` });
+  } catch (error) {
+    console.error('Error responding to team invite:', error);
+    res.status(500).send('Error processing team invite');
+  }
+});
+
+// Manage a team (rename, add or remove members)
 app.post('/manage-team', authenticateUser, async (req, res) => {
-    const { teamId, action, name, memberId } = req.body;
-    try {
-      const team = await Team.findById(teamId);
-      if (!team) return res.status(404).send('Team not found');
-      if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can manage this team');
-  
-      if (action === 'rename') {
-        const duplicateTeam = await Team.findOne({ name, owner: req.userId, _id: { $ne: teamId } });
-        if (duplicateTeam) return res.status(400).send('You already have a team with this name');
-        team.name = name;
-      } else if (action === 'remove') {
-        const isPendingInvite = team.pendingInvites.includes(memberId);
-        team.members = team.members.filter((id) => id.toString() !== memberId);
-        team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== memberId);
-        await Task.updateMany({ team: teamId, assignees: memberId }, { $pull: { assignees: memberId } });
-  
-        // Notify the user based on their status
-        if (isPendingInvite) {
-          // Invite was revoked
-          io.to(memberId).emit('inviteRevoked', { teamId: team._id });
-        } else {
-          // Member was removed from the team
-          io.to(memberId).emit('removedFromTeam', { teamId: team._id });
-        }
+  const { teamId, action, name, memberId } = req.body;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).send('Team not found');
+    if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can manage this team');
+
+    if (action === 'rename') {
+      const duplicateTeam = await Team.findOne({ name, owner: req.userId, _id: { $ne: teamId } });
+      if (duplicateTeam) return res.status(400).send('You already have a team with this name');
+      team.name = name;
+    } else if (action === 'remove') {
+      const isPendingInvite = team.pendingInvites.includes(memberId);
+      team.members = team.members.filter((id) => id.toString() !== memberId);
+      team.pendingInvites = team.pendingInvites.filter((id) => id.toString() !== memberId);
+      await Task.updateMany({ team: teamId, assignees: memberId }, { $pull: { assignees: memberId } });
+
+      // Notify the user based on their status
+      if (isPendingInvite) {
+        // Invite was revoked
+        io.to(memberId).emit('inviteRevoked', { teamId: team._id });
+      } else {
+        // Member was removed from the team
+        io.to(memberId).emit('removedFromTeam', { teamId: team._id });
       }
-  
-      await team.save();
-      res.send({ success: true, team });
-  
-      // Notify team members of the update
-      team.members.forEach((memberId) => io.to(memberId.toString()).emit('teamUpdated', { teamId: team._id }));
-    } catch (error) {
-      console.error('Error managing team:', error);
-      res.status(500).send('Error managing team');
     }
-  });  
-  
-  // Leave a team (only if the user is not the owner)
-  app.post('/leave-team', authenticateUser, async (req, res) => {
-    const { teamId } = req.body;
-    try {
-      const team = await Team.findById(teamId);
-      if (!team) return res.status(404).send('Team not found');
-      if (team.owner.toString() === req.userId) return res.status(400).send('Team owner cannot leave their own team');
-  
-      team.members = team.members.filter((id) => id.toString() !== req.userId);
-      await team.save();
-      await Task.updateMany({ team: teamId, assignees: req.userId }, { $pull: { assignees: req.userId } });
-  
-      io.to(req.userId).emit('leftTeam', teamId);
-      io.to(team.owner.toString()).emit('memberLeftTeam', { teamId, userId: req.userId });
-      res.send({ success: true, message: 'Left the team successfully' });
-    } catch (error) {
-      console.error('Error leaving team:', error);
-      res.status(500).send('Error leaving team');
-    }
-  });
-  
-  // Delete a team (only the team owner can delete)
-  app.delete('/delete-team/:id', authenticateUser, async (req, res) => {
-    const teamId = req.params.id;
-    try {
-      const team = await Team.findById(teamId);
-      if (!team) return res.status(404).send('Team not found');
-      if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can delete the team');
-  
-      await Task.deleteMany({ team: teamId });
-      team.members.forEach((memberId) => io.to(memberId.toString()).emit('teamDeleted', teamId));
-      await Team.findByIdAndDelete(teamId);
-      res.send({ success: true, message: 'Team deleted successfully' });
-    } catch (error) {
-      console.error('Error deleting team:', error);
-      res.status(500).send('Error deleting team');
-    }
-  });
-  
+
+    await team.save();
+    res.send({ success: true, team });
+
+    // Notify team members of the update
+    team.members.forEach((memberId) => io.to(memberId.toString()).emit('teamUpdated', { teamId: team._id }));
+  } catch (error) {
+    console.error('Error managing team:', error);
+    res.status(500).send('Error managing team');
+  }
+});
+
+// Leave a team (only if the user is not the owner)
+app.post('/leave-team', authenticateUser, async (req, res) => {
+  const { teamId } = req.body;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).send('Team not found');
+    if (team.owner.toString() === req.userId) return res.status(400).send('Team owner cannot leave their own team');
+
+    team.members = team.members.filter((id) => id.toString() !== req.userId);
+    await team.save();
+    await Task.updateMany({ team: teamId, assignees: req.userId }, { $pull: { assignees: req.userId } });
+
+    io.to(req.userId).emit('leftTeam', teamId);
+    io.to(team.owner.toString()).emit('memberLeftTeam', { teamId, userId: req.userId });
+    res.send({ success: true, message: 'Left the team successfully' });
+  } catch (error) {
+    console.error('Error leaving team:', error);
+    res.status(500).send('Error leaving team');
+  }
+});
+
+// Delete a team (only the team owner can delete)
+app.delete('/delete-team/:id', authenticateUser, async (req, res) => {
+  const teamId = req.params.id;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).send('Team not found');
+    if (team.owner.toString() !== req.userId) return res.status(403).send('Only the team owner can delete the team');
+
+    await Task.deleteMany({ team: teamId });
+    team.members.forEach((memberId) => io.to(memberId.toString()).emit('teamDeleted', teamId));
+    await Team.findByIdAndDelete(teamId);
+    res.send({ success: true, message: 'Team deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).send('Error deleting team');
+  }
+});
+
 // Start the server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
