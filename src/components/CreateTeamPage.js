@@ -1,20 +1,39 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 
 function CreateTeamPage() {
   const [teamName, setTeamName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
   const token = localStorage.getItem('token');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch friends using React Query
-  const { data: friends, error, isLoading } = useQuery('friends', async () => {
-    const response = await axios.get('http://localhost:5000/friends', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data.friends;
-  });
+  const { data: friends, error, isLoading } = useQuery(
+    'friends',
+    async () => {
+      if (!token) {
+        navigate('/login'); // Redirect if no token
+        return;
+      }
+
+      try {
+        const response = await axios.get('http://localhost:5000/friends', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data.friends;
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('token'); // Clear invalid token
+          navigate('/login'); // Redirect to login
+        }
+        throw error; // Pass error for error handling in UI
+      }
+    },
+    { enabled: !!token } // Only run query if token is present
+  );
 
   // Mutation to create a new team
   const createTeamMutation = useMutation(
@@ -30,6 +49,10 @@ function CreateTeamPage() {
         );
         return teamResponse.data.team._id; // Return teamId if successful
       } catch (error) {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('token'); // Clear invalid token
+          navigate('/login'); // Redirect to login
+        }
         throw error; // Pass error to onError for handling
       }
     },
@@ -39,7 +62,7 @@ function CreateTeamPage() {
         queryClient.invalidateQueries('teams'); // Refresh team queries if needed
         setTeamName(''); // Reset form
         setSelectedMembers([]);
-        window.location.href = '/teams'; // Redirect to teams page
+        navigate('/teams'); // Redirect to teams page
       },
       onError: (error) => {
         if (error.response?.status === 400 && error.response?.data === "You already have a team with this name") {
@@ -86,7 +109,7 @@ function CreateTeamPage() {
 
       <h3>Invite Members</h3>
       <ul>
-        {friends.map((friend) => (
+        {friends && friends.map((friend) => (
           <li key={friend._id}>
             <label>
               <input

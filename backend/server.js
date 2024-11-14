@@ -1,23 +1,20 @@
-// server.js
+// Import required libraries
 const express = require('express');
-const http = require('http'); // Needed for Socket.IO
-const socketIo = require('socket.io'); // Import socket.io
+const http = require('http');
+const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const User = require('./models/User');
 const Task = require('./models/Task');
 const Team = require('./models/Team');
 
 dotenv.config();
 const app = express();
-const server = http.createServer(app); // Create server for Socket.IO
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-  },
-}); // Initialize Socket.IO
+const server = http.createServer(app);
+const io = socketIo(server, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
@@ -31,9 +28,10 @@ mongoose
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.log(err));
 
-const JWT_SECRET = 'your_jwt_secret'; // Replace with a secure secret
+const JWT_SECRET = 'your_jwt_secret';
+const SALT_ROUNDS = 10;
 
-// Middleware to authenticate JWT and get the user ID
+// Middleware for JWT authentication
 const authenticateUser = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).send('Unauthorized');
@@ -61,54 +59,151 @@ io.use((socket, next) => {
   }
 });
 
-// Socket.IO Connection
-io.on('connection', (socket) => {
-  const userId = socket.userId;
-  console.log(`User connected: ${userId}`);
-
-  // Join the user-specific room
-  socket.join(userId);
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${userId}`);
-  });
-});
-
 // Signup route
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
+
   try {
-    const newUser = new User({ username, email, password });
+    const newUser = new User({ username, email, password }); // No manual hashing required
     await newUser.save();
     res.status(201).send('User created successfully');
     io.emit('dataUpdated'); // Emit update event
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(400).send('Error creating user');
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === 'username' ? 'Username is already taken.' : 'Email is already in use.';
+      res.status(400).send({ message });
+    } else {
+      console.error('Error creating user:', error);
+      res.status(400).send('Error creating user');
+    }
   }
 });
 
 // Login route
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
+
   try {
-    const user = await User.findOne({ email, password });
-    if (user) {
-      const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
-        expiresIn: '1h',
-      });
-      res.send({
-        success: true,
-        token,
-        username: user.username,
-        userId: user._id,
-      });
-    } else {
-      res.status(401).send({ success: false, message: 'Invalid email or password' });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).send('Invalid email or password');
     }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).send('Invalid email or password');
+    }
+
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+    res.send({
+      success: true,
+      token,
+      username: user.username,
+      userId: user._id,
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).send({ success: false, message: 'Login failed' });
+    res.status(500).send('Error logging in');
+  }
+});
+
+// Update user password
+app.put('/update-password', authenticateUser, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const user = await User.findById(req.userId);
+
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      return res.status(400).send('Old password is incorrect');
+    }
+
+    if (oldPassword === newPassword) {
+      return res.status(400).send('New password cannot be the same as the old password');
+    }
+
+    user.password = newPassword; // No manual hashing required
+    await user.save();
+
+    res.send({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).send('Error updating password');
+  }
+});
+
+// Delete account route
+app.delete('/delete-account', authenticateUser, async (req, res) => {
+  const { password } = req.body;
+
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+
+    // Verify the password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).send('Incorrect password');
+    }
+
+    // Find teams owned by the user
+    const teamsOwned = await Team.find({ owner: userId });
+    const teamIds = teamsOwned.map((team) => team._id);
+
+    // Delete tasks associated with these teams
+    await Task.deleteMany({ team: { $in: teamIds } });
+
+    // Delete the teams
+    await Team.deleteMany({ owner: userId });
+
+    // Remove user from other teams
+    await Team.updateMany(
+      { members: userId },
+      {
+        $pull: { members: userId },
+      }
+    );
+
+    // Delete user's personal tasks
+    await Task.deleteMany({ userId });
+
+    // Delete tasks assigned to the user
+    await Task.updateMany(
+      { assignees: userId },
+      { $pull: { assignees: userId } }
+    );
+
+    // Remove user from other users' friends lists
+    await User.updateMany(
+      { friends: userId },
+      { $pull: { friends: userId } }
+    );
+
+    // Delete the user account
+    await User.findByIdAndDelete(userId);
+
+    res.send({ success: true, message: 'Account and associated data deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).send('Error deleting account');
+  }
+});
+
+// Get user details route
+app.get('/user-details', authenticateUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('username email');
+    if (!user) return res.status(404).send('User not found');
+
+    res.send({
+      username: user.username,
+      email: user.email,
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).send('Error fetching user details');
   }
 });
 
@@ -116,20 +211,38 @@ app.post('/login', async (req, res) => {
 
 // Create a new task
 app.post('/add-task', authenticateUser, async (req, res) => {
-  const { text, description, teamId, assignees, priority, dueDate, isPersonal } = req.body;
+  const {
+    text,
+    description,
+    teamId,
+    assignees,
+    priority,
+    dueDate,
+    isPersonal,
+    isCompleted,
+  } = req.body;
   try {
     const taskData = {
       text,
       description,
       userId: req.userId,
       priority,
-      dueDate,
       isPersonal: isPersonal || false,
       status: 'not started',
-      isCompleted: false, // Initialize as not completed
+      isCompleted: isCompleted || false,
     };
 
+    // Handle dueDate with proper time zone management
+    if (dueDate) {
+      const dueDateObj = new Date(dueDate);
+      taskData.dueDate = dueDateObj;
+    }
+
     if (teamId && teamId !== 'personal') {
+      const team = await Team.findById(teamId);
+      if (!team || !team.members.includes(req.userId)) {
+        return res.status(403).send('Not authorized to add a task to this team');
+      }
       taskData.team = teamId;
     }
 
@@ -141,11 +254,9 @@ app.post('/add-task', authenticateUser, async (req, res) => {
     await task.save();
     res.send(task);
 
-    // Emit task creation event to relevant users
+    // Notify only relevant members in the team
     const recipientIds = new Set();
-    if (task.assignees) {
-      task.assignees.forEach((id) => recipientIds.add(id.toString()));
-    }
+    if (task.assignees) task.assignees.forEach((id) => recipientIds.add(id.toString()));
     if (task.team) {
       const team = await Team.findById(task.team);
       team.members.forEach((id) => recipientIds.add(id.toString()));
@@ -164,22 +275,20 @@ app.post('/add-task', authenticateUser, async (req, res) => {
 // Get all tasks for the authenticated user
 app.get('/tasks', authenticateUser, async (req, res) => {
   try {
-    // Find teams the user is currently a member of
     const userTeams = await Team.find({ members: req.userId }).select('_id');
     const teamIds = userTeams.map((team) => team._id);
 
-    // Find tasks assigned to the user or to their current teams
     const tasks = await Task.find({
       $or: [
-        { userId: req.userId }, // Personal tasks created by the user
-        { assignees: req.userId }, // Tasks directly assigned to the user
-        { team: { $in: teamIds } }, // Tasks associated with teams the user is currently a member of
+        { isPersonal: true, userId: req.userId },
+        { assignees: req.userId },
+        { team: { $in: teamIds } },
       ],
     })
       .populate('team', 'name')
       .populate('assignees', 'username')
       .populate('userId', 'username')
-      .sort({ isCompleted: 1, dueDate: 1 }); // Sort by completion status and due date
+      .sort({ isCompleted: 1, dueDate: 1 });
 
     res.send(tasks);
   } catch (error) {
@@ -196,25 +305,19 @@ app.delete('/delete-task/:id', authenticateUser, async (req, res) => {
 
     if (!task) return res.status(404).send('Task not found');
 
-    // Check if the user is authorized
-    const isAuthorized =
-      task.userId.toString() === req.userId ||
-      task.assignees.map((id) => id.toString()).includes(req.userId) ||
-      (task.team && task.team.members.map((id) => id.toString()).includes(req.userId));
+    const isAuthorized = task.isPersonal
+      ? task.userId.toString() === req.userId
+      : task.team.members.map((id) => id.toString()).includes(req.userId);
 
     if (!isAuthorized) {
       return res.status(403).send('Not authorized to delete this task');
     }
 
     await task.deleteOne();
-
     res.send({ success: true, message: 'Task deleted successfully' });
 
-    // Emit task deletion event to relevant users
     const recipientIds = new Set();
-    if (task.assignees) {
-      task.assignees.forEach((id) => recipientIds.add(id.toString()));
-    }
+    if (task.assignees) task.assignees.forEach((id) => recipientIds.add(id.toString()));
     if (task.team) {
       const team = await Team.findById(task.team);
       team.members.forEach((id) => recipientIds.add(id.toString()));
@@ -233,41 +336,45 @@ app.delete('/delete-task/:id', authenticateUser, async (req, res) => {
 // Update a task's details
 app.put('/update-task/:id', authenticateUser, async (req, res) => {
   const taskId = req.params.id;
-  const { text, description, assignees, priority, dueDate, status, isCompleted } = req.body;
+  const {
+    text,
+    description,
+    assignees,
+    priority,
+    dueDate,
+    status,
+    isCompleted,
+  } = req.body;
 
   try {
     const task = await Task.findById(taskId).populate('team', 'members');
 
     if (!task) return res.status(404).send('Task not found');
 
-    // Check if the user is authorized
-    const isAuthorized =
-      task.userId.toString() === req.userId ||
-      task.assignees.map((id) => id.toString()).includes(req.userId) ||
-      (task.team && task.team.members.map((id) => id.toString()).includes(req.userId));
+    const isAuthorized = task.isPersonal
+      ? task.userId.toString() === req.userId
+      : task.team.members.map((id) => id.toString()).includes(req.userId);
 
     if (!isAuthorized) {
       return res.status(403).send('Not authorized to update this task');
     }
 
-    // Update task fields if provided in the request body
-    if (text) task.text = text;
-    if (description) task.description = description;
-    if (assignees) task.assignees = assignees;
-    if (priority) task.priority = priority;
-    if (dueDate) task.dueDate = dueDate;
-    if (status) task.status = status;
-    task.isCompleted = isCompleted ?? task.isCompleted; // Update isCompleted if provided
+    if (text !== undefined) task.text = text;
+    if (description !== undefined) task.description = description;
+    if (assignees !== undefined) task.assignees = assignees;
+    if (priority !== undefined) task.priority = priority;
+    if (dueDate !== undefined) {
+      const dueDateObj = new Date(dueDate);
+      task.dueDate = dueDateObj;
+    }
+    if (status !== undefined) task.status = status;
+    if (isCompleted !== undefined) task.isCompleted = isCompleted;
 
     await task.save();
-
     res.send({ success: true, task });
 
-    // Emit task update event to relevant users
     const recipientIds = new Set();
-    if (task.assignees) {
-      task.assignees.forEach((id) => recipientIds.add(id.toString()));
-    }
+    if (task.assignees) task.assignees.forEach((id) => recipientIds.add(id.toString()));
     if (task.team) {
       const team = await Team.findById(task.team);
       team.members.forEach((id) => recipientIds.add(id.toString()));
@@ -400,7 +507,7 @@ app.post('/create-team', authenticateUser, async (req, res) => {
     const newTeam = new Team({
       name,
       owner: req.userId,
-      members: [req.userId], // Owner is automatically a member
+      members: [req.userId],
       pendingInvites: members,
     });
     await newTeam.save();
@@ -434,7 +541,7 @@ app.get('/teams', authenticateUser, async (req, res) => {
     const teams = await Team.find({ members: req.userId })
       .populate('members', 'username')
       .populate('owner', 'username')
-      .populate('pendingInvites', 'username'); // Populate pendingInvites with usernames
+      .populate('pendingInvites', 'username');
     res.send({ teams, userId: req.userId });
   } catch (error) {
     console.error('Error fetching teams:', error);
@@ -532,10 +639,8 @@ app.post('/manage-team', authenticateUser, async (req, res) => {
 
       // Notify the user based on their status
       if (isPendingInvite) {
-        // Invite was revoked
         io.to(memberId).emit('inviteRevoked', { teamId: team._id });
       } else {
-        // Member was removed from the team
         io.to(memberId).emit('removedFromTeam', { teamId: team._id });
       }
     }
@@ -594,3 +699,4 @@ app.delete('/delete-team/:id', authenticateUser, async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

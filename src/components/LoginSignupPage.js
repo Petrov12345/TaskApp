@@ -10,11 +10,13 @@ function LoginSignupPage({ onLogin }) {
     confirmPassword: '',
     username: '',
   });
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
     setFormData({ email: '', password: '', confirmPassword: '', username: '' });
+    setErrorMessage('');
   };
 
   const handleChange = (e) => {
@@ -24,6 +26,13 @@ function LoginSignupPage({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+    
     try {
       if (isLogin) {
         const response = await axios.post('http://localhost:5000/login', {
@@ -35,16 +44,11 @@ function LoginSignupPage({ onLogin }) {
           localStorage.setItem('userId', response.data.userId);
           localStorage.setItem('username', response.data.username);
           onLogin();
-          alert("Login successful!");
           navigate('/');
         } else {
-          alert("Invalid credentials. Please try again.");
+          setErrorMessage("Invalid credentials. Please try again.");
         }
       } else {
-        if (formData.password !== formData.confirmPassword) {
-          alert("Passwords do not match.");
-          return;
-        }
         await axios.post('http://localhost:5000/signup', {
           username: formData.username,
           email: formData.email,
@@ -54,10 +58,25 @@ function LoginSignupPage({ onLogin }) {
         toggleForm();
       }
     } catch (error) {
-      if (error.response && error.response.status === 400) {
-        alert(error.response.data.message || "There was an error. Please try again.");
+      if (error.response) {
+        if (error.response.status === 400) {
+          // Handle specific signup errors like duplicate username/email
+          const message = error.response.data.message;
+          if (message.includes("username")) {
+            setErrorMessage("Username is already taken.");
+          } else if (message.includes("email")) {
+            setErrorMessage("Email is already in use.");
+          } else {
+            setErrorMessage(message || "There was an error. Please try again.");
+          }
+        } else if (error.response.status === 401) {
+          // Invalid login credentials
+          setErrorMessage("Invalid email or password. Please try again.");
+        } else {
+          setErrorMessage("An unexpected error occurred. Please try again later.");
+        }
       } else {
-        alert("An unexpected error occurred. Please try again later.");
+        setErrorMessage("An unexpected error occurred. Please try again later.");
       }
     }
   };
@@ -66,6 +85,8 @@ function LoginSignupPage({ onLogin }) {
     <div>
       <h2>{isLogin ? 'Login' : 'Sign Up'}</h2>
       <form onSubmit={handleSubmit}>
+        {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+        
         {!isLogin && (
           <div>
             <label>Username:</label>
@@ -78,6 +99,7 @@ function LoginSignupPage({ onLogin }) {
             />
           </div>
         )}
+        
         <div>
           <label>Email:</label>
           <input
@@ -88,6 +110,7 @@ function LoginSignupPage({ onLogin }) {
             required
           />
         </div>
+        
         <div>
           <label>Password:</label>
           <input
@@ -98,6 +121,7 @@ function LoginSignupPage({ onLogin }) {
             required
           />
         </div>
+        
         {!isLogin && (
           <div>
             <label>Confirm Password:</label>
@@ -110,10 +134,12 @@ function LoginSignupPage({ onLogin }) {
             />
           </div>
         )}
+        
         <button type="submit" disabled={!formData.email || !formData.password}>
           {isLogin ? 'Login' : 'Sign Up'}
         </button>
       </form>
+      
       <p onClick={toggleForm} style={{ cursor: 'pointer', color: 'blue' }}>
         {isLogin ? 'Need an account? Sign up' : 'Already have an account? Login'}
       </p>

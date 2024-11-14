@@ -1,44 +1,48 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom'; // To get state from navigation
+import { useLocation } from 'react-router-dom';
 import { SocketContext } from '../App';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import '../CSS-Style/Taskpage.css';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 function TaskPage() {
   const [teams, setTeams] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [teamTasks, setTeamTasks] = useState({});
   const [taskText, setTaskText] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('personal');
   const [assignees, setAssignees] = useState([]);
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [priority, setPriority] = useState('low');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [dueTime, setDueTime] = useState(dayjs().format('HH:mm'));
   const [editingTask, setEditingTask] = useState(null);
-  const [highlightedTaskId, setHighlightedTaskId] = useState(null); // Track the highlighted task
-  const [hasScrolledToLocationTask, setHasScrolledToLocationTask] = useState(false); // New state
+  const [highlightedTaskId, setHighlightedTaskId] = useState(null);
+  const [hasScrolledToLocationTask, setHasScrolledToLocationTask] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
   const socket = useContext(SocketContext);
-  const location = useLocation(); // Access the state passed from CalendarPage
-  const taskRefs = useRef({}); // Store references to each task item
+  const location = useLocation();
+  const taskRefs = useRef({});
 
-  // Function to scroll to a specific task and reset highlights if necessary
   const scrollToTask = (taskId) => {
     if (highlightedTaskId) {
-      // Clear any existing highlight
       const previousElement = taskRefs.current[highlightedTaskId];
       if (previousElement) previousElement.classList.remove('highlight');
     }
 
-    // Set and highlight the new task
     const taskElement = taskRefs.current[taskId];
     if (taskElement) {
-      setHighlightedTaskId(taskId); // Update the highlighted task ID
+      setHighlightedTaskId(taskId);
       taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       taskElement.classList.add('highlight');
-      setTimeout(() => taskElement.classList.remove('highlight'), 1500); // Remove highlight after 1.5s
+      setTimeout(() => taskElement.classList.remove('highlight'), 1500);
     }
   };
 
@@ -48,14 +52,7 @@ function TaskPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        const groupedTasks = {};
-        response.data.forEach((task) => {
-          const teamId = task.team?._id || 'personal';
-          if (!groupedTasks[teamId]) groupedTasks[teamId] = [];
-          groupedTasks[teamId].push(task);
-        });
         setTasks(response.data);
-        setTeamTasks(groupedTasks);
       })
       .catch((error) => console.error('Error fetching tasks:', error));
   }, [token]);
@@ -96,7 +93,6 @@ function TaskPage() {
     };
   }, [socket, fetchTasks, fetchTeams]);
 
-  // Use effect to scroll to the task from location.state once
   useEffect(() => {
     if (!hasScrolledToLocationTask && location.state?.taskId && tasks.length > 0) {
       scrollToTask(location.state.taskId);
@@ -105,10 +101,13 @@ function TaskPage() {
   }, [hasScrolledToLocationTask, location.state, tasks]);
 
   const handleCreateOrUpdateTask = () => {
-    if (!taskText || !dueDate) {
-      alert('Please enter task text and due date.');
+    if (!taskText || !dueDate || !dueTime) {
+      alert('Please enter task text, due date, and due time.');
       return;
     }
+
+    const dueDateTimeString = `${dueDate}T${dueTime}`;
+    const dueDateTime = dayjs.tz(dueDateTimeString, dayjs.tz.guess()).toISOString();
 
     const taskData = {
       text: taskText,
@@ -116,8 +115,9 @@ function TaskPage() {
       teamId: selectedTeam === 'personal' ? null : selectedTeam,
       assignees: selectedTeam === 'personal' ? [userId] : selectedAssignees,
       priority,
-      dueDate,
+      dueDate: dueDateTime,
       isPersonal: selectedTeam === 'personal',
+      isCompleted,
     };
 
     const request = editingTask
@@ -133,11 +133,8 @@ function TaskPage() {
         fetchTasks();
         resetForm();
 
-        // Highlight the newly created or updated task
         const updatedTaskId = editingTask ? editingTask._id : response.data._id;
         scrollToTask(updatedTaskId);
-
-        // Clear location.state to prevent re-highlighting the calendar-selected task
         setHasScrolledToLocationTask(true);
       })
       .catch((error) =>
@@ -166,7 +163,9 @@ function TaskPage() {
     setSelectedTeam(task.team ? task.team._id : 'personal');
     setSelectedAssignees(task.assignees.map((assignee) => assignee._id));
     setPriority(task.priority);
-    setDueDate(task.dueDate.slice(0, 10));
+    setDueDate(dayjs(task.dueDate).format('YYYY-MM-DD'));
+    setDueTime(dayjs(task.dueDate).format('HH:mm'));
+    setIsCompleted(task.isCompleted || false);
 
     scrollToTask(task._id);
   };
@@ -177,8 +176,10 @@ function TaskPage() {
     setSelectedTeam('personal');
     setSelectedAssignees([]);
     setPriority('low');
-    setDueDate('');
+    setDueDate(dayjs().format('YYYY-MM-DD'));
+    setDueTime(dayjs().format('HH:mm'));
     setEditingTask(null);
+    setIsCompleted(false);
   };
 
   const handleAssigneeChange = (event) => {
@@ -187,9 +188,11 @@ function TaskPage() {
       .filter((option) => option.selected)
       .map((option) => option.value);
 
-    setSelectedAssignees(
-      selectedValues.includes('all') ? assignees.map((member) => member._id) : selectedValues
-    );
+    if (selectedValues.includes('all')) {
+      setSelectedAssignees(assignees.map((member) => member._id));
+    } else {
+      setSelectedAssignees(selectedValues);
+    }
   };
 
   useEffect(() => {
@@ -198,8 +201,34 @@ function TaskPage() {
       if (team) setAssignees(team.members);
     } else {
       setAssignees([]);
+      setSelectedAssignees([userId]);
     }
-  }, [selectedTeam, teams]);
+  }, [selectedTeam, teams, userId]);
+
+  const handleToggleComplete = (task) => {
+    axios
+      .put(
+        `http://localhost:5000/update-task/${task._id}`,
+        {
+          isCompleted: !task.isCompleted,
+          completedAt: !task.isCompleted ? new Date() : null,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(() => fetchTasks())
+      .catch((error) => console.error('Error updating task:', error));
+  };
+
+  // Helper functions to filter and sort tasks
+  const incompleteTasks = tasks
+    .filter((task) => !task.isCompleted)
+    .sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)));
+
+  const completedTasks = tasks
+    .filter((task) => task.isCompleted)
+    .sort((a, b) => dayjs(b.completedAt).diff(dayjs(a.completedAt)));
 
   return (
     <div className="task-page">
@@ -226,6 +255,7 @@ function TaskPage() {
             setSelectedAssignees(teamSelection === 'personal' ? [userId] : []);
           }}
           value={selectedTeam}
+          disabled={editingTask !== null} // Disable changing team when editing
         >
           {teams.map((team) => (
             <option key={team._id} value={team._id}>
@@ -235,7 +265,7 @@ function TaskPage() {
         </select>
 
         {selectedTeam !== 'personal' && (
-          <select multiple onChange={handleAssigneeChange}>
+          <select multiple onChange={handleAssigneeChange} value={selectedAssignees}>
             <option value="all">All Team Members</option>
             {assignees.map((member) => (
               <option key={member._id} value={member._id}>
@@ -251,46 +281,127 @@ function TaskPage() {
           <option value="high">High</option>
           <option value="very high">Very High</option>
         </select>
+
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
+
+        <label>
+          <input
+            type="checkbox"
+            checked={isCompleted}
+            onChange={(e) => setIsCompleted(e.target.checked)}
+          />
+          Task Completed
+        </label>
+
         <button onClick={handleCreateOrUpdateTask}>
           {editingTask ? 'Update Task' : 'Add Task'}
         </button>
+        {editingTask && <button onClick={resetForm}>Cancel Editing Task</button>}
       </div>
 
       <h3>All Tasks</h3>
-      {Object.keys(teamTasks).map((teamId) => (
-        <div key={teamId}>
-          <h4>
-            {teamId === 'personal'
-              ? 'Personal Tasks'
-              : teams.find((team) => team._id === teamId)?.name}
-          </h4>
-          <ul className="task-list">
-            {teamTasks[teamId]
-              ?.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-              .map((task) => (
-                <li
-                  key={task._id}
-                  ref={(el) => (taskRefs.current[task._id] = el)} // Store ref for each task
-                  className={`task-item ${highlightedTaskId === task._id ? 'highlight' : ''}`} // Apply highlight class
-                >
-                  <div>
-                    <strong>{task.text}</strong>
-                  </div>
-                  {task.description && <p>{task.description}</p>}
-                  {!task.isCompleted && (
-                    <>
-                      <span>Priority: {task.priority}</span>
-                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                    </>
-                  )}
-                  <button onClick={() => handleEditTask(task)}>Edit</button>
-                  <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
-                </li>
-              ))}
-          </ul>
-        </div>
-      ))}
+      <ul className="task-list">
+        {incompleteTasks.map((task) => {
+          const taskTeam =
+            task.isPersonal || !task.team
+              ? null
+              : teams.find((team) => team._id === task.team._id);
+          const taskTeamMembers = taskTeam ? taskTeam.members : [];
+
+          return (
+            <li
+              key={task._id}
+              ref={(el) => (taskRefs.current[task._id] = el)}
+              className={`task-item ${highlightedTaskId === task._id ? 'highlight' : ''}`}
+            >
+              <div>
+                <strong>{task.text}</strong>
+              </div>
+              {task.description && <p>{task.description}</p>}
+              <span>
+                Team:{' '}
+                {task.isPersonal
+                  ? 'Personal'
+                  : taskTeam?.name || 'Unknown Team'}
+              </span>
+              <span>Priority: {task.priority}</span>
+              <span>Due: {dayjs(task.dueDate).local().format('MM/DD/YYYY HH:mm')}</span>
+              {/* Display Assigned Members */}
+              {task.isPersonal ? (
+                <span>Assigned to: You</span>
+              ) : (
+                <span>
+                  Assigned to:{' '}
+                  {task.assignees.length === taskTeamMembers.length
+                    ? 'All'
+                    : task.assignees.map((assignee) => assignee.username).join(', ')}
+                </span>
+              )}
+              <div className="task-actions">
+                <button onClick={() => handleEditTask(task)}>Edit</button>
+                <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
+                <button onClick={() => handleToggleComplete(task)}>Mark Complete</button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <h3>Completed Tasks</h3>
+      <ul className="task-list">
+        {completedTasks.map((task) => {
+          const taskTeam =
+            task.isPersonal || !task.team
+              ? null
+              : teams.find((team) => team._id === task.team._id);
+          const taskTeamMembers = taskTeam ? taskTeam.members : [];
+
+          return (
+            <li
+              key={task._id}
+              ref={(el) => (taskRefs.current[task._id] = el)}
+              className={`task-item completed-task ${
+                highlightedTaskId === task._id ? 'highlight' : ''
+              }`}
+            >
+              <div>
+                <strong>{task.text}</strong>
+              </div>
+              {task.description && <p>{task.description}</p>}
+              <span>
+                Team:{' '}
+                {task.isPersonal
+                  ? 'Personal'
+                  : taskTeam?.name || 'Unknown Team'}
+              </span>
+              <span>Priority: {task.priority}</span>
+              <span>Due: {dayjs(task.dueDate).local().format('MM/DD/YYYY HH:mm')}</span>
+              {task.completedAt && (
+                <span>
+                  Completed: {dayjs(task.completedAt).local().format('MM/DD/YYYY HH:mm')}
+                </span>
+              )}
+              {/* Display Assigned Members */}
+              {task.isPersonal ? (
+                <span>Assigned to: You</span>
+              ) : (
+                <span>
+                  Assigned to:{' '}
+                  {task.assignees.length === taskTeamMembers.length
+                    ? 'All'
+                    : task.assignees.map((assignee) => assignee.username).join(', ')}
+                </span>
+              )}
+              <div className="task-actions">
+                <button onClick={() => handleEditTask(task)}>Edit</button>
+                <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
+                <button onClick={() => handleToggleComplete(task)}>Mark Incomplete</button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

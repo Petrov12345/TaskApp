@@ -13,11 +13,12 @@ function CalendarPage() {
   const navigate = useNavigate();
 
   const fetchTasks = useCallback(() => {
-    axios.get('http://localhost:5000/tasks', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(response => setTasks(response.data))
-      .catch(error => console.error('Error fetching tasks:', error));
+    axios
+      .get('http://localhost:5000/tasks', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setTasks(response.data))
+      .catch((error) => console.error('Error fetching tasks:', error));
   }, [token]);
 
   useEffect(() => {
@@ -41,48 +42,51 @@ function CalendarPage() {
   };
 
   const getTasksForDate = (date) => {
-    return tasks.filter(task => dayjs(task.dueDate).isSame(date, 'day'));
+    return tasks.filter((task) => dayjs(task.dueDate).isSame(date, 'day'));
   };
 
   const handleTaskClick = (taskId) => {
-    navigate('/tasks', { state: { taskId } }); // Pass taskId via state
+    navigate('/tasks', { state: { taskId } });
   };
 
   const renderCalendar = () => {
-    const startDay = currentMonth.startOf('month').startOf('week');
-    const endDay = currentMonth.endOf('month').endOf('week');
-    const calendar = [];
-    let date = startDay;
+    const startOfMonth = currentMonth.startOf('month');
+    const endOfMonth = currentMonth.endOf('month');
+    const daysInMonth = currentMonth.daysInMonth();
+    const firstDayOfWeek = startOfMonth.day();
+    const days = [];
 
-    while (date.isBefore(endDay, 'day')) {
-      calendar.push(
-        <div key={date.format('YYYY-MM-DD')} className="calendar-row">
-          {[...Array(7)].map((_, i) => {
-            const dayTasks = getTasksForDate(date);
-            const currentDate = date;
-            date = date.add(1, 'day');
-            return (
-              <div 
-                key={i} 
-                className={`calendar-day ${currentDate.isSame(currentMonth, 'month') ? '' : 'disabled'}`}>
-                <span>{currentDate.date()}</span>
-                {dayTasks.map(task => (
-                  <div 
-                    key={task._id} 
-                    className="task" 
-                    onClick={() => handleTaskClick(task._id)} // Pass task ID on click
-                  >
-                    {task.text}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(<div key={`empty-start-${i}`} className="calendar-day empty"></div>);
+    }
+
+    // Add days of the current month
+    for (let date = 1; date <= daysInMonth; date++) {
+      const currentDate = dayjs(currentMonth).date(date);
+      days.push(
+        <div key={currentDate.format('YYYY-MM-DD')} className="calendar-day">
+          <span>{date}</span>
+          {getTasksForDate(currentDate).map((task) => (
+            <div
+              key={task._id}
+              className={`task ${task.isCompleted ? 'completed-task' : ''}`}
+              onClick={() => handleTaskClick(task._id)}
+            >
+              {task.text}
+            </div>
+          ))}
         </div>
       );
     }
 
-    return calendar;
+    // Add empty cells for days after the last day of the month
+    const remainingCells = 42 - days.length; // 6 weeks * 7 days = 42 cells
+    for (let i = 0; i < remainingCells; i++) {
+      days.push(<div key={`empty-end-${i}`} className="calendar-day empty"></div>);
+    }
+
+    return days;
   };
 
   return (
@@ -94,6 +98,11 @@ function CalendarPage() {
         <button onClick={() => handleMonthChange(1)}>Next</button>
       </div>
       <div className="calendar-grid">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          <div key={day} className="calendar-header">
+            {day}
+          </div>
+        ))}
         {renderCalendar()}
       </div>
     </div>

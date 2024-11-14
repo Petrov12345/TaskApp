@@ -206,7 +206,7 @@ function ManageTeamPage() {
         {joinedTeams.map(team => (
           <li key={team._id}>
             {team.name}
-            <button onClick={() => handleSelectTeam(team)}>Manage</button>
+            <button onClick={() => handleSelectTeam(team)}>View</button>
           </li>
         ))}
       </ul>
@@ -214,6 +214,19 @@ function ManageTeamPage() {
       {selectedTeam && (
         <div>
           <h3>Managing Team: {selectedTeam.name}</h3>
+
+          <h4>Team Members</h4>
+          <ul>
+            {teamMembers.map(member => (
+              <li key={member._id}>
+                {member.username}
+                {selectedTeam.owner._id === loggedInUserId && member._id !== loggedInUserId && (
+                  <button onClick={() => handleRemoveMember(member._id)}>Remove</button>
+                )}
+              </li>
+            ))}
+          </ul>
+
           {selectedTeam.owner._id === loggedInUserId ? (
             <>
               <div>
@@ -225,18 +238,6 @@ function ManageTeamPage() {
                 />
                 <button onClick={handleRenameTeam}>Save</button>
               </div>
-
-              <h4>Team Members</h4>
-              <ul>
-                {teamMembers.map(member => (
-                  <li key={member._id}>
-                    {member.username}
-                    {member._id !== loggedInUserId && (
-                      <button onClick={() => handleRemoveMember(member._id)}>Remove</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
 
               <h4>Pending Invites</h4>
               <ul>

@@ -1,4 +1,3 @@
-// Navbar.js
 import React, { useEffect, useCallback, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SocketContext } from '../App';
@@ -10,11 +9,14 @@ function Navbar({ isLoggedIn, onLogout }) {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('userId');
     onLogout();
+
     if (socket) {
       socket.emit('logout');
       socket.disconnect();
     }
+    
     navigate('/');
   }, [navigate, onLogout, socket]);
 
@@ -30,10 +32,11 @@ function Navbar({ isLoggedIn, onLogout }) {
   return (
     <nav>
       <Link to="/">Home</Link>
-      <Link to="/tasks">Tasks</Link>
+      {isLoggedIn && <Link to="/tasks">Tasks</Link>}
       {isLoggedIn && <Link to="/friends">Friends</Link>}
       {isLoggedIn && <Link to="/teams">Teams</Link>}
-      {isLoggedIn && <Link to="/calendar">Calendar</Link>} {/* New Calendar Link */}
+      {isLoggedIn && <Link to="/calendar">Calendar</Link>}
+      {isLoggedIn && <Link to="/account">Account</Link>} {/* Account link added */}
       {isLoggedIn ? (
         <button onClick={handleLogout}>Log Out</button>
       ) : (

@@ -11,6 +11,7 @@ const taskSchema = new mongoose.Schema({
   status: { type: String, enum: ['not started', 'in progress', 'completed'], default: 'not started' }, // Status
   isPersonal: { type: Boolean, default: false }, // Indicates if this is a personal task
   description: { type: String }, // Optional detailed description
+  isCompleted: { type: Boolean, default: false }, // Indicates if the task is completed
 });
 
 module.exports = mongoose.model('Task', taskSchema);

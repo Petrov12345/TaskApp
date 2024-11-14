@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { io } from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 // Establish a socket connection
 const socket = io('http://localhost:5000');
@@ -10,17 +11,35 @@ function FriendsPage() {
   const [friendUsername, setFriendUsername] = useState('');
   const token = localStorage.getItem('token');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Query keys for better reuse and consistency
   const FRIENDS_DATA_QUERY_KEY = 'friendsData';
 
   // Fetch friends and friend requests
-  const { data, error, isLoading } = useQuery(FRIENDS_DATA_QUERY_KEY, async () => {
-    const response = await axios.get('http://localhost:5000/friends', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  });
+  const { data, error, isLoading } = useQuery(
+    FRIENDS_DATA_QUERY_KEY,
+    async () => {
+      if (!token) {
+        navigate('/login'); // Redirect if no token
+        return;
+      }
+
+      try {
+        const response = await axios.get('http://localhost:5000/friends', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data;
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('token'); // Clear invalid token
+          navigate('/login'); // Redirect to login
+        }
+        throw error; // Pass error for UI error handling
+      }
+    },
+    { enabled: !!token } // Only run query if token is present
+  );
 
   const friends = data?.friends || [];
   const friendRequests = data?.friendRequests || [];
@@ -39,6 +58,7 @@ function FriendsPage() {
       onSuccess: () => {
         alert('Friend request sent!');
         setFriendUsername('');
+        queryClient.invalidateQueries(FRIENDS_DATA_QUERY_KEY); // Refresh friends
       },
       onError: (error) => {
         alert(error.response?.data?.error || 'An unexpected error occurred.');

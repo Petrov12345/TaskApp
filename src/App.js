@@ -11,7 +11,9 @@ import TeamsPage from './components/TeamsPage';
 import CreateTeamPage from './components/CreateTeamPage';
 import ManageTeamPage from './components/ManageTeamPage';
 import TeamInvitesPage from './components/TeamInvitesPage';
-import CalendarPage from './components/CalendarPage'; // Import the CalendarPage component
+import CalendarPage from './components/CalendarPage';
+import AccountPage from './components/AccountPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export const SocketContext = createContext(); // Create a Socket Context
 
@@ -23,14 +25,12 @@ function App() {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    // Connect to the socket server with token for authenticated communication
     const token = localStorage.getItem('token');
     const newSocket = io('http://localhost:5000', {
-      auth: { token }, // Authenticate the socket connection with JWT token
+      auth: { token },
     });
     setSocket(newSocket);
 
-    // Set up listeners for global events
     newSocket.on('connect', () => {
       console.log('Connected to the socket server');
     });
@@ -39,7 +39,7 @@ function App() {
       console.log('Disconnected from the socket server');
     });
 
-    // Clean up the socket connection on component unmount
+    // Clean up socket connection on component unmount
     return () => {
       if (newSocket) {
         newSocket.close();
@@ -72,15 +72,16 @@ function App() {
             <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/tasks" element={<TasksPage />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/teams" element={<TeamsPage />} />
-              <Route path="/create-team" element={<CreateTeamPage />} />
-              <Route path="/manage-team" element={<ManageTeamPage />} />
-              <Route path="/team-invites" element={<TeamInvitesPage />} />
-              <Route path="/calendar" element={<CalendarPage />} /> {/* New Calendar Route */}
+              <Route path="/tasks" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TasksPage /></ProtectedRoute>} />
+              <Route path="/friends" element={<ProtectedRoute isLoggedIn={isLoggedIn}><FriendsPage /></ProtectedRoute>} />
+              <Route path="/teams" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TeamsPage /></ProtectedRoute>} />
+              <Route path="/create-team" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CreateTeamPage /></ProtectedRoute>} />
+              <Route path="/manage-team" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ManageTeamPage /></ProtectedRoute>} />
+              <Route path="/team-invites" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TeamInvitesPage /></ProtectedRoute>} />
+              <Route path="/calendar" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CalendarPage /></ProtectedRoute>} />
+              <Route path="/account" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccountPage /></ProtectedRoute>} />
               <Route path="/login" element={<LoginSignupPage onLogin={handleLogin} />} />
-            </Routes>
+</Routes>
           </div>
         </Router>
       </SocketContext.Provider>
