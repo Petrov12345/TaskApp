@@ -1,0 +1,140 @@
+/* Taskpage.css */
+.task-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.task-page h2,
+.task-page h3,
+.task-page h4 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.task-form {
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.task-form input[type='text'],
+.task-form textarea,
+.task-form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.task-form input[type='date'],
+.task-form input[type='time'] {
+  width: 49%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.task-form label {
+  display: block;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.task-form button {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.task-form button:hover {
+  background-color: #45a049;
+}
+
+.task-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.task-item {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  transition: background-color 1.5s ease-out; /* Smooth background transitions */
+}
+
+.task-item strong {
+  font-size: 18px;
+  color: #333;
+}
+
+.task-item p {
+  color: #666;
+  margin: 10px 0;
+}
+
+.task-item span {
+  display: inline-block;
+  margin-right: 15px;
+  color: #888;
+}
+
+.task-item .task-actions {
+  margin-top: 10px;
+}
+
+.task-item button {
+  background-color: #008cba;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin-right: 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.task-item button:hover {
+  background-color: #007b9a;
+}
+
+.task-item button:last-child {
+  background-color: #f44336;
+}
+
+.task-item button:last-child:hover {
+  background-color: #da190b;
+}
+
+/* Highlighted task */
+.task-item.highlight {
+  background-color: rgba(255, 255, 0, 0.4); /* Semi-transparent yellow */
+}
+
+/* Completed task styling */
+.task-item.completed-task {
+  background-color: #d4edda; /* Light green background */
+  border-color: #c3e6cb;
+}
+
+.task-item.completed-task strong,
+.task-item.completed-task p,
+.task-item.completed-task span {
+  color: #155724;
+}
+
+.task-item.completed-task button {
+  background-color: #28a745;
+}
+
+.task-item.completed-task button:hover {
+  background-color: #218838;
+}

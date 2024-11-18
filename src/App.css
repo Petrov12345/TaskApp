@@ -1,0 +1,26 @@
+/* src/App.css */
+form {
+  max-width: 400px;
+  margin: auto;
+  padding: 1em;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+form div {
+  margin-bottom: 1em;
+}
+
+form label {
+  margin-bottom: .5em;
+  color: #333333;
+  display: block;
+}
+
+form input {
+  border: 1px solid #CCCCCC;
+  padding: .5em;
+  font-size: 1em;
+  width: 100%;
+  border-radius: 5px;
+}

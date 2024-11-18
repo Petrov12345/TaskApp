@@ -1,0 +1,98 @@
+/* CalendarPage.css */
+
+/* Basic layout styles */
+.calendar-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendar-controls button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.calendar-controls button:hover {
+  background-color: #0056b3;
+}
+
+/* Grid layout for calendar days */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+/* Header styles for days of the week */
+.calendar-header {
+  font-weight: bold;
+  padding: 10px;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* Styles for each day cell */
+.calendar-day {
+  border: 1px solid #ddd;
+  padding: 10px;
+  min-height: 80px;
+  position: relative;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+.calendar-day.empty {
+  background-color: #f9f9f9;
+  border: none;
+}
+
+.calendar-day span {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Task styles within each day cell */
+.task {
+  background-color: #ffe4b5;
+  color: #555;
+  margin-top: 5px;
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task:hover {
+  background-color: #ffca7a;
+}
+
+/* Completed task styles */
+.task.completed-task {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.task.completed-task:hover {
+  background-color: #c3e6cb;
+}
+
+/* Remove styles for days not in current month */
+.calendar-day.disabled {
+  display: none;
+}
