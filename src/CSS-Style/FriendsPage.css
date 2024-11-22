@@ -1,0 +1,36 @@
+/* FriendsPage.css */
+
+.friends-container {
+    padding: 20px;
+  }
+  
+  .friends-container h2,
+  .friends-container h3 {
+    color: #333;
+  }
+  
+  .friends-container input[type='text'] {
+    padding: 8px;
+    margin-right: 10px;
+  }
+  
+  .friends-container button {
+    padding: 8px 12px;
+  }
+  
+  .friends-list,
+  .friend-requests-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .friends-list li,
+  .friend-requests-list li {
+    margin-bottom: 10px;
+  }
+  
+  .friends-list button,
+  .friend-requests-list button {
+    margin-left: 10px;
+  }
+  

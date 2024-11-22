@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocketContext } from '../App'; // Import SocketContext to access the global socket
+import '../CSS-Style/LandingPage.css';
 
 function LandingPage() {
   const [username, setUsername] = useState('');
@@ -35,7 +36,7 @@ function LandingPage() {
   }, [socket, token, navigate]);
 
   return (
-    <div>
+    <div className="landing-container">
       <h2>Welcome {username ? `${username}` : "to Task Manager"}!</h2>
       <p>Manage your tasks efficiently.</p>
       {/* Include any other content for the landing page */}

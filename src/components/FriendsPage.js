@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import '../CSS-Style/FriendsPage.css';
 
 // Establish a socket connection
 const socket = io('http://localhost:5000');
@@ -135,7 +136,7 @@ function FriendsPage() {
   if (error) return <p>Error loading friends: {error.message}</p>;
 
   return (
-    <div>
+    <div className="friends-container">
       <h2>Friends</h2>
 
       <div>
@@ -151,11 +152,14 @@ function FriendsPage() {
       </div>
 
       <h3>Your Friends</h3>
-      <ul>
+      <ul className="friends-list">
         {friends.map((friend) => (
           <li key={friend._id}>
             {friend.username}
-            <button onClick={() => handleRemoveFriend(friend._id, friend.username)} style={{ marginLeft: '10px' }}>
+            <button
+              onClick={() => handleRemoveFriend(friend._id, friend.username)}
+              style={{ marginLeft: '10px' }}
+            >
               Remove
             </button>
           </li>
@@ -163,7 +167,7 @@ function FriendsPage() {
       </ul>
 
       <h3>Friend Requests</h3>
-      <ul>
+      <ul className="friend-requests-list">
         {friendRequests.map((request) => (
           <li key={request._id}>
             {request.username}

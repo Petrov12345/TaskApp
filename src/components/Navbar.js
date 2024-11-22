@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SocketContext } from '../App';
+import '../CSS-Style/Navbar.css';
 
 function Navbar({ isLoggedIn, onLogout }) {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ function Navbar({ isLoggedIn, onLogout }) {
       {isLoggedIn && <Link to="/friends">Friends</Link>}
       {isLoggedIn && <Link to="/teams">Teams</Link>}
       {isLoggedIn && <Link to="/calendar">Calendar</Link>}
-      {isLoggedIn && <Link to="/account">Account</Link>} {/* Account link added */}
+      {isLoggedIn && <Link to="/account">Account</Link>}
       {isLoggedIn ? (
         <button onClick={handleLogout}>Log Out</button>
       ) : (

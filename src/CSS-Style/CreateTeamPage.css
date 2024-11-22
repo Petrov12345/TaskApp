@@ -1,0 +1,35 @@
+/* CreateTeamPage.css */
+
+.create-team-container {
+    padding: 20px;
+  }
+  
+  .create-team-container h2,
+  .create-team-container h3 {
+    color: #333;
+  }
+  
+  .create-team-container label {
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  .create-team-container input[type='text'] {
+    padding: 8px;
+    width: 300px;
+    margin-bottom: 20px;
+  }
+  
+  .create-team-container ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .create-team-container li {
+    margin-bottom: 10px;
+  }
+  
+  .create-team-container button {
+    padding: 10px 15px;
+  }
+  

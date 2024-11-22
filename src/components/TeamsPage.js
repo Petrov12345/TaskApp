@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { SocketContext } from '../App';
+import '../CSS-Style/TeamsPage.css';
 
 function TeamsPage() {
   const [ownedTeams, setOwnedTeams] = useState([]);
@@ -13,25 +14,27 @@ function TeamsPage() {
 
   // Fetches teams the user is a member of and owns
   const fetchTeamsData = useCallback(() => {
-    axios.get('http://localhost:5000/teams', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(response => {
-        const owned = response.data.teams.filter(team => team.owner._id === userId);
-        const joined = response.data.teams.filter(team => team.owner._id !== userId);
+    axios
+      .get('http://localhost:5000/teams', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        const owned = response.data.teams.filter((team) => team.owner._id === userId);
+        const joined = response.data.teams.filter((team) => team.owner._id !== userId);
         setOwnedTeams(owned);
         setJoinedTeams(joined);
       })
-      .catch(error => console.error('Error fetching teams:', error));
+      .catch((error) => console.error('Error fetching teams:', error));
   }, [token, userId]);
 
   // Fetches the list of team invites
   const fetchInvitesData = useCallback(() => {
-    axios.get('http://localhost:5000/team-invites', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(response => setTeamInvites(response.data))
-      .catch(error => console.error('Error fetching team invites:', error));
+    axios
+      .get('http://localhost:5000/team-invites', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setTeamInvites(response.data))
+      .catch((error) => console.error('Error fetching team invites:', error));
   }, [token]);
 
   // Initial fetch and set up real-time updates
@@ -62,35 +65,45 @@ function TeamsPage() {
 
   // Handles accepting an invite
   const handleAcceptInvite = (teamId) => {
-    axios.post('http://localhost:5000/respond-team-invite', {
-      teamId,
-      action: 'accept'
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axios
+      .post(
+        'http://localhost:5000/respond-team-invite',
+        {
+          teamId,
+          action: 'accept',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
       .then(() => {
-        setTeamInvites(teamInvites.filter(invite => invite.team._id !== teamId));
+        setTeamInvites(teamInvites.filter((invite) => invite.team._id !== teamId));
         fetchTeamsData(); // Refreshes teams list after acceptance
       })
-      .catch(error => console.error('Error accepting invite:', error));
+      .catch((error) => console.error('Error accepting invite:', error));
   };
 
   // Handles denying an invite
   const handleDenyInvite = (teamId) => {
-    axios.post('http://localhost:5000/respond-team-invite', {
-      teamId,
-      action: 'deny'
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axios
+      .post(
+        'http://localhost:5000/respond-team-invite',
+        {
+          teamId,
+          action: 'deny',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
       .then(() => {
-        setTeamInvites(teamInvites.filter(invite => invite.team._id !== teamId));
+        setTeamInvites(teamInvites.filter((invite) => invite.team._id !== teamId));
       })
-      .catch(error => console.error('Error denying invite:', error));
+      .catch((error) => console.error('Error denying invite:', error));
   };
 
   return (
-    <div>
+    <div className="teams-container">
       <h2>Teams</h2>
       <div>
         <Link to="/create-team">
@@ -104,7 +117,7 @@ function TeamsPage() {
       <h3>Your Teams</h3>
       {ownedTeams.length > 0 ? (
         <ul>
-          {ownedTeams.map(team => (
+          {ownedTeams.map((team) => (
             <li key={team._id}>{team.name}</li>
           ))}
         </ul>
@@ -115,7 +128,7 @@ function TeamsPage() {
       <h3>Teams</h3>
       {joinedTeams.length > 0 ? (
         <ul>
-          {joinedTeams.map(team => (
+          {joinedTeams.map((team) => (
             <li key={team._id}>{team.name}</li>
           ))}
         </ul>
@@ -125,8 +138,8 @@ function TeamsPage() {
 
       <h3>Team Invites</h3>
       {teamInvites.length > 0 ? (
-        <ul>
-          {teamInvites.map(invite => (
+        <ul className="team-invites-list">
+          {teamInvites.map((invite) => (
             <li key={invite.team._id}>
               {invite.team.name} (invited by {invite.invitedBy.username})
               <button onClick={() => handleAcceptInvite(invite.team._id)}>Accept</button>

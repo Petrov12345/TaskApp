@@ -1,0 +1,53 @@
+/* LoginSignupPage.css */
+
+.login-signup-container {
+    padding: 20px;
+    max-width: 400px;
+    margin: auto;
+  }
+  
+  .login-signup-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .login-signup-container form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .login-signup-container label {
+    margin-bottom: 5px;
+  }
+  
+  .login-signup-container input {
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+  }
+  
+  .login-signup-container button {
+    padding: 10px 15px;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .login-signup-container button:disabled {
+    background-color: #888;
+    cursor: not-allowed;
+  }
+  
+  .login-signup-container p {
+    text-align: center;
+    color: blue;
+    cursor: pointer;
+  }
+  
+  .error-message {
+    color: red;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  

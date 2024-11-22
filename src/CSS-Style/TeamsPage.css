@@ -1,0 +1,29 @@
+/* TeamsPage.css */
+
+.teams-container {
+    padding: 20px;
+  }
+  
+  .teams-container h2,
+  .teams-container h3 {
+    color: #333;
+  }
+  
+  .teams-container button {
+    margin-right: 10px;
+    padding: 8px 12px;
+  }
+  
+  .teams-container ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .teams-container li {
+    margin-bottom: 10px;
+  }
+  
+  .team-invites-list li button {
+    margin-left: 5px;
+  }
+  

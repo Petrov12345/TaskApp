@@ -14,6 +14,7 @@ import TeamInvitesPage from './components/TeamInvitesPage';
 import CalendarPage from './components/CalendarPage';
 import AccountPage from './components/AccountPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import './CSS-Style/App.css';
 
 export const SocketContext = createContext(); // Create a Socket Context
 
@@ -68,20 +69,79 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SocketContext.Provider value={socket}>
         <Router>
-          <div>
+          <div className="container">
             <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/tasks" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TasksPage /></ProtectedRoute>} />
-              <Route path="/friends" element={<ProtectedRoute isLoggedIn={isLoggedIn}><FriendsPage /></ProtectedRoute>} />
-              <Route path="/teams" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TeamsPage /></ProtectedRoute>} />
-              <Route path="/create-team" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CreateTeamPage /></ProtectedRoute>} />
-              <Route path="/manage-team" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ManageTeamPage /></ProtectedRoute>} />
-              <Route path="/team-invites" element={<ProtectedRoute isLoggedIn={isLoggedIn}><TeamInvitesPage /></ProtectedRoute>} />
-              <Route path="/calendar" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CalendarPage /></ProtectedRoute>} />
-              <Route path="/account" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccountPage /></ProtectedRoute>} />
-              <Route path="/login" element={<LoginSignupPage onLogin={handleLogin} />} />
-</Routes>
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <TasksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <FriendsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <TeamsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/create-team"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <CreateTeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/manage-team"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <ManageTeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/team-invites"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <TeamInvitesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/account"
+                element={
+                  <ProtectedRoute isLoggedIn={isLoggedIn}>
+                    <AccountPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/login"
+                element={<LoginSignupPage onLogin={handleLogin} />}
+              />
+            </Routes>
           </div>
         </Router>
       </SocketContext.Provider>

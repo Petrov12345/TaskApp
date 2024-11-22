@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
+import '../CSS-Style/CreateTeamPage.css';
 
 function CreateTeamPage() {
   const [teamName, setTeamName] = useState('');
@@ -65,11 +66,14 @@ function CreateTeamPage() {
         navigate('/teams'); // Redirect to teams page
       },
       onError: (error) => {
-        if (error.response?.status === 400 && error.response?.data === "You already have a team with this name") {
-          alert("Team name already in use");
+        if (
+          error.response?.status === 400 &&
+          error.response?.data === 'You already have a team with this name'
+        ) {
+          alert('Team name already in use');
         } else {
-          console.error("Error creating team or sending invites:", error);
-          alert("Error creating team. Please try again.");
+          console.error('Error creating team or sending invites:', error);
+          alert('Error creating team. Please try again.');
         }
       },
     }
@@ -77,7 +81,7 @@ function CreateTeamPage() {
 
   const handleCreateTeam = () => {
     if (!teamName.trim()) {
-      alert("Please enter a valid team name.");
+      alert('Please enter a valid team name.');
       return;
     }
     createTeamMutation.mutate({ name: teamName, selectedMembers });
@@ -95,10 +99,10 @@ function CreateTeamPage() {
   if (error) return <p>Error loading friends: {error.message}</p>;
 
   return (
-    <div>
+    <div className="create-team-container">
       <h2>Create Team</h2>
       <div>
-        <label>Team Name: </label>
+        <label>Team Name:</label>
         <input
           type="text"
           value={teamName}
@@ -109,18 +113,19 @@ function CreateTeamPage() {
 
       <h3>Invite Members</h3>
       <ul>
-        {friends && friends.map((friend) => (
-          <li key={friend._id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selectedMembers.includes(friend._id)}
-                onChange={() => toggleMemberSelection(friend._id)}
-              />
-              {friend.username}
-            </label>
-          </li>
-        ))}
+        {friends &&
+          friends.map((friend) => (
+            <li key={friend._id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selectedMembers.includes(friend._id)}
+                  onChange={() => toggleMemberSelection(friend._id)}
+                />
+                {friend.username}
+              </label>
+            </li>
+          ))}
       </ul>
 
       <button onClick={handleCreateTeam} disabled={createTeamMutation.isLoading}>

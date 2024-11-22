@@ -1,0 +1,31 @@
+/* ManageTeamPage.css */
+
+.manage-team-container {
+    padding: 20px;
+  }
+  
+  .manage-team-container h2,
+  .manage-team-container h3,
+  .manage-team-container h4 {
+    color: #333;
+  }
+  
+  .manage-team-container ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .manage-team-container li {
+    margin-bottom: 10px;
+  }
+  
+  .manage-team-container button {
+    margin-left: 10px;
+    padding: 5px 10px;
+  }
+  
+  .manage-team-container input[type='text'] {
+    padding: 8px;
+    margin-right: 10px;
+  }
+  

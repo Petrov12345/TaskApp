@@ -1,0 +1,49 @@
+/* AccountPage.css */
+
+.account-container {
+    padding: 20px;
+  }
+  
+  .account-container h2,
+  .account-container h3 {
+    color: #333;
+  }
+  
+  .account-container p {
+    color: #555;
+  }
+  
+  .account-container button {
+    margin-top: 10px;
+    padding: 10px 15px;
+  }
+  
+  .account-container form {
+    margin-top: 20px;
+  }
+  
+  .account-container label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .account-container input[type='password'] {
+    padding: 8px;
+    width: 300px;
+    margin-bottom: 10px;
+  }
+  
+  .account-container .error-message {
+    color: red;
+  }
+  
+  .account-container .success-message {
+    color: green;
+  }
+  
+  .account-container .delete-confirmation {
+    margin-top: 20px;
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+  }
+  

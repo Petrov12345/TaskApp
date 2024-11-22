@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import '../CSS-Style/AccountPage.css';
 
 function AccountPage() {
   const [oldPassword, setOldPassword] = useState('');
@@ -100,7 +101,7 @@ function AccountPage() {
   };
 
   return (
-    <div>
+    <div className="account-container">
       <h2>Account Settings</h2>
 
       {username && <h3>Welcome, {username}!</h3>}
@@ -144,14 +145,14 @@ function AccountPage() {
         </form>
       )}
 
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-      {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
+      {successMessage && <p className="success-message">{successMessage}</p>}
 
       {/* Delete Account Section */}
       <button onClick={() => setShowDeleteConfirm(true)}>Delete Account</button>
 
       {showDeleteConfirm && (
-        <div>
+        <div className="delete-confirmation">
           <h3>Are you sure you want to delete your account?</h3>
           <p>This action is irreversible.</p>
           <input
