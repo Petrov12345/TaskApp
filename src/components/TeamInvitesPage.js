@@ -8,7 +8,7 @@ function TeamInvitesPage() {
   const socket = useContext(SocketContext);
 
   const fetchInvites = () => {
-    axios.get('http://localhost:5000/team-invites', {
+    axios.get('http://3.145.63.83:5000/team-invites', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(response => setInvites(response.data))
@@ -33,7 +33,7 @@ function TeamInvitesPage() {
   }, [socket]);
 
   const handleInviteResponse = (teamId, action) => {
-    axios.post('http://localhost:5000/respond-team-invite', { teamId, action }, {
+    axios.post('http://3.145.63.83:5000/respond-team-invite', { teamId, action }, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(() => {

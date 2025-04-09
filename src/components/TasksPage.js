@@ -48,7 +48,7 @@ function TaskPage() {
 
   const fetchTasks = useCallback(() => {
     axios
-      .get('http://localhost:5000/tasks', {
+      .get('http://3.145.63.83:5000/tasks', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
@@ -59,7 +59,7 @@ function TaskPage() {
 
   const fetchTeams = useCallback(() => {
     axios
-      .get('http://localhost:5000/teams', {
+      .get('http://3.145.63.83:5000/teams', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
@@ -121,10 +121,10 @@ function TaskPage() {
     };
 
     const request = editingTask
-      ? axios.put(`http://localhost:5000/update-task/${editingTask._id}`, taskData, {
+      ? axios.put(`http://3.145.63.83:5000/update-task/${editingTask._id}`, taskData, {
           headers: { Authorization: `Bearer ${token}` },
         })
-      : axios.post('http://localhost:5000/add-task', taskData, {
+      : axios.post('http://3.145.63.83:5000/add-task', taskData, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -144,7 +144,7 @@ function TaskPage() {
 
   const handleDeleteTask = (taskId) => {
     axios
-      .delete(`http://localhost:5000/delete-task/${taskId}`, {
+      .delete(`http://3.145.63.83:5000/delete-task/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then(() => {
@@ -208,7 +208,7 @@ function TaskPage() {
   const handleToggleComplete = (task) => {
     axios
       .put(
-        `http://localhost:5000/update-task/${task._id}`,
+        `http://3.145.63.83:5000/update-task/${task._id}`,
         {
           isCompleted: !task.isCompleted,
           completedAt: !task.isCompleted ? new Date() : null,

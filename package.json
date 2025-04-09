@@ -1,6 +1,7 @@
 {
   "name": "task-app",
   "version": "0.1.0",
+  "proxy": "http://3.145.63.83:5000",
   "private": true,
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

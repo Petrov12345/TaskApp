@@ -36,7 +36,7 @@ function LoginSignupPage({ onLogin }) {
 
     try {
       if (isLogin) {
-        const response = await axios.post('http://localhost:5000/login', {
+        const response = await axios.post('http://3.145.63.83:5000/login', {
           email: formData.email,
           password: formData.password,
         });
@@ -50,7 +50,7 @@ function LoginSignupPage({ onLogin }) {
           setErrorMessage('Invalid credentials. Please try again.');
         }
       } else {
-        await axios.post('http://localhost:5000/signup', {
+        await axios.post('http://3.145.63.83:5000/signup', {
           username: formData.username,
           email: formData.email,
           password: formData.password,

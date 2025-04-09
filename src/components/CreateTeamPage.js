@@ -21,7 +21,7 @@ function CreateTeamPage() {
       }
 
       try {
-        const response = await axios.get('http://localhost:5000/friends', {
+        const response = await axios.get('http://3.145.63.83:5000/friends', {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data.friends;
@@ -42,7 +42,7 @@ function CreateTeamPage() {
       try {
         // First, create the team
         const teamResponse = await axios.post(
-          'http://localhost:5000/create-team',
+          'http://3.145.63.83:5000/create-team',
           { name, members: selectedMembers }, // Include members directly in team creation
           {
             headers: { Authorization: `Bearer ${token}` },

@@ -27,7 +27,7 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('http://3.145.63.83:5000', {
       auth: { token },
     });
     setSocket(newSocket);

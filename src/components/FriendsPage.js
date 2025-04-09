@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import '../CSS-Style/FriendsPage.css';
 
 // Establish a socket connection
-const socket = io('http://localhost:5000');
+const socket = io('http://3.145.63.83:5000');
 
 function FriendsPage() {
   const [friendUsername, setFriendUsername] = useState('');
@@ -27,7 +27,7 @@ function FriendsPage() {
       }
 
       try {
-        const response = await axios.get('http://localhost:5000/friends', {
+        const response = await axios.get('http://3.145.63.83:5000/friends', {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
@@ -49,7 +49,7 @@ function FriendsPage() {
   const sendFriendRequestMutation = useMutation(
     async (username) => {
       const response = await axios.post(
-        'http://localhost:5000/send-friend-request',
+        'http://3.145.63.83:5000/send-friend-request',
         { friendUsername: username },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -71,7 +71,7 @@ function FriendsPage() {
   const respondToFriendRequestMutation = useMutation(
     async ({ requesterId, action }) => {
       await axios.post(
-        'http://localhost:5000/respond-friend-request',
+        'http://3.145.63.83:5000/respond-friend-request',
         { requesterId, action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -90,7 +90,7 @@ function FriendsPage() {
   const removeFriendMutation = useMutation(
     async (friendId) => {
       await axios.post(
-        'http://localhost:5000/remove-friend',
+        'http://3.145.63.83:5000/remove-friend',
         { friendId },
         { headers: { Authorization: `Bearer ${token}` } }
       );

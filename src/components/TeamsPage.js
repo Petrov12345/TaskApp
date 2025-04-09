@@ -15,7 +15,7 @@ function TeamsPage() {
   // Fetches teams the user is a member of and owns
   const fetchTeamsData = useCallback(() => {
     axios
-      .get('http://localhost:5000/teams', {
+      .get('http://3.145.63.83:5000/teams', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
@@ -30,7 +30,7 @@ function TeamsPage() {
   // Fetches the list of team invites
   const fetchInvitesData = useCallback(() => {
     axios
-      .get('http://localhost:5000/team-invites', {
+      .get('http://3.145.63.83:5000/team-invites', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => setTeamInvites(response.data))
@@ -67,7 +67,7 @@ function TeamsPage() {
   const handleAcceptInvite = (teamId) => {
     axios
       .post(
-        'http://localhost:5000/respond-team-invite',
+        'http://3.145.63.83:5000/respond-team-invite',
         {
           teamId,
           action: 'accept',
@@ -87,7 +87,7 @@ function TeamsPage() {
   const handleDenyInvite = (teamId) => {
     axios
       .post(
-        'http://localhost:5000/respond-team-invite',
+        'http://3.145.63.83:5000/respond-team-invite',
         {
           teamId,
           action: 'deny',

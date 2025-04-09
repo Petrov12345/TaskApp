@@ -18,7 +18,7 @@ function ManageTeamPage() {
 
   const fetchTeams = useCallback(() => {
     axios
-      .get('http://localhost:5000/teams', {
+      .get('http://3.145.63.83:5000/teams', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
@@ -33,7 +33,7 @@ function ManageTeamPage() {
 
   const fetchFriends = useCallback(() => {
     axios
-      .get('http://localhost:5000/friends', {
+      .get('http://3.145.63.83:5000/friends', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => setFriends(response.data.friends))
@@ -42,7 +42,7 @@ function ManageTeamPage() {
 
   const fetchTasks = useCallback(() => {
     axios
-      .get('http://localhost:5000/tasks', {
+      .get('http://3.145.63.83:5000/tasks', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => setTasks(response.data))
@@ -88,7 +88,7 @@ function ManageTeamPage() {
 
     axios
       .post(
-        'http://localhost:5000/manage-team',
+        'http://3.145.63.83:5000/manage-team',
         {
           teamId: selectedTeam._id,
           action: 'rename',
@@ -122,7 +122,7 @@ function ManageTeamPage() {
   const handleAddMember = (friendId) => {
     axios
       .post(
-        'http://localhost:5000/invite-to-team',
+        'http://3.145.63.83:5000/invite-to-team',
         {
           teamId: selectedTeam._id,
           inviteeId: friendId,
@@ -155,7 +155,7 @@ function ManageTeamPage() {
   const handleRevokeInvite = (inviteeId) => {
     axios
       .post(
-        'http://localhost:5000/manage-team',
+        'http://3.145.63.83:5000/manage-team',
         {
           teamId: selectedTeam._id,
           action: 'remove',
@@ -174,7 +174,7 @@ function ManageTeamPage() {
   const handleRemoveMember = (memberId) => {
     axios
       .post(
-        'http://localhost:5000/manage-team',
+        'http://3.145.63.83:5000/manage-team',
         {
           teamId: selectedTeam._id,
           action: 'remove',
@@ -195,7 +195,7 @@ function ManageTeamPage() {
     if (window.confirm('Are you sure you want to leave this team?')) {
       axios
         .post(
-          'http://localhost:5000/leave-team',
+          'http://3.145.63.83:5000/leave-team',
           {
             teamId: selectedTeam._id,
           },
@@ -215,7 +215,7 @@ function ManageTeamPage() {
   const handleDeleteTeam = () => {
     if (window.confirm('Are you sure you want to delete this team?')) {
       axios
-        .delete(`http://localhost:5000/delete-team/${selectedTeam._id}`, {
+        .delete(`http://3.145.63.83:5000/delete-team/${selectedTeam._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then(() => {

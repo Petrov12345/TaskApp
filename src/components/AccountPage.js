@@ -18,7 +18,7 @@ function AccountPage() {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/user-details', {
+        const response = await axios.get('http://3.145.63.83:5000/user-details', {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
@@ -45,7 +45,7 @@ function AccountPage() {
 
     try {
       const response = await axios.put(
-        'http://localhost:5000/update-password',
+        'http://3.145.63.83:5000/update-password',
         {
           oldPassword,
           newPassword,
@@ -83,7 +83,7 @@ function AccountPage() {
     }
 
     try {
-      const response = await axios.delete('http://localhost:5000/delete-account', {
+      const response = await axios.delete('http://3.145.63.83:5000/delete-account', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

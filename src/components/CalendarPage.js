@@ -14,7 +14,7 @@ function CalendarPage() {
 
   const fetchTasks = useCallback(() => {
     axios
-      .get('http://localhost:5000/tasks', {
+      .get('http://3.145.63.83:5000/tasks', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => setTasks(response.data))
